@@ -20,7 +20,7 @@ var userCount = 0
 var JWT_SECRET = []byte("secret")
 
 
-func registateAnonym(c echo.Context) error {
+func registrateAnonym(c echo.Context) error {
 
 	userCount++;
 	// Set custom claims
@@ -50,11 +50,16 @@ func accessible(c echo.Context) error {
 	return c.String(http.StatusOK, "Accessible")
 }
 
-func restricted(c echo.Context) error {
+func userInfo(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*jwtUserClaims)
 	name := claims.Name
-	return c.String(http.StatusOK, "Welcome "+name+"!")
+	expired := claims.ExpiresAt
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"user": name,
+		"expiredAt": time.Unix(expired, 0),
+	})
 }
 
 func main() {
@@ -65,7 +70,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 
-	// CORS restricted
+	// CORS userInfo
 	// Allows requests from any `https://labstack.com` or `https://labstack.net` origin
 	// wth GET, PUT, POST or DELETE method.
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -74,14 +79,14 @@ func main() {
 	}))
 
 
-	// Login route
-	e.POST("/registate_anonym", registateAnonym)
-
 	// Unauthenticated route
 	e.GET("/", accessible)
 
+	// Login route
+	e.POST("/registrate_anonym", registrateAnonym)
+
 	// Restricted group
-	r := e.Group("/restricted")
+	r := e.Group("/api")
 
 	// Configure middleware with the custom claims type
 	config := middleware.JWTConfig{
@@ -89,7 +94,7 @@ func main() {
 		SigningKey: []byte("secret"),
 	}
 	r.Use(middleware.JWTWithConfig(config))
-	r.GET("", restricted)
+	r.GET("/user", userInfo)
 
 	e.Logger.Fatal(e.Start(":3001"))
 }
