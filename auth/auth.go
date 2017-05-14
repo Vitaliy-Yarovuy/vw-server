@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"net/http"
@@ -10,21 +10,12 @@ import (
 	"fmt"
 )
 
-// jwtCustomClaims are custom claims extending default ones.
-type jwtUserClaims struct {
-	Name  string `json:"name"`
-	jwt.StandardClaims
-}
-
 var userCount = 0
-var JWT_SECRET = []byte("secret")
-
 
 func registrateAnonym(c echo.Context) error {
-
 	userCount++;
 	// Set custom claims
-	claims := &jwtUserClaims{
+	claims := &JWTUserClaims{
 		"Jon Snow #" + fmt.Sprint(userCount),
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),
@@ -52,7 +43,7 @@ func accessible(c echo.Context) error {
 
 func userInfo(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*jwtUserClaims)
+	claims := user.Claims.(*JWTUserClaims)
 	name := claims.Name
 	expired := claims.ExpiresAt
 
@@ -62,7 +53,8 @@ func userInfo(c echo.Context) error {
 	})
 }
 
-func main() {
+
+func Linsten() {
 	e := echo.New()
 
 	// Middleware
@@ -89,11 +81,7 @@ func main() {
 	r := e.Group("/api")
 
 	// Configure middleware with the custom claims type
-	config := middleware.JWTConfig{
-		Claims:     &jwtUserClaims{},
-		SigningKey: []byte("secret"),
-	}
-	r.Use(middleware.JWTWithConfig(config))
+	r.Use(middleware.JWTWithConfig(JWT_MIDDLEWARE_CONFIG))
 	r.GET("/user", userInfo)
 
 	e.Logger.Fatal(e.Start(":3001"))
