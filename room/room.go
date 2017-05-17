@@ -36,25 +36,31 @@ func wsUpgrade(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	defer ws.Close()
+	defer func(){
+		log.Printf("user %s - exit",name)
+		ws.Close()
+	} ()
 
 	for {
 		// Write
 		err := ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Hello, %s !", name)))
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			return err
 		}
 
 		// Read
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			return err
 		}
-		fmt.Printf("%s\n", msg)
+		fmt.Printf("MSG: %s\n", msg)
 	}
 }
 
 func Linsten() {
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
