@@ -13,13 +13,33 @@ import (
 	"net/http"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/Vitaliy-Yarovuy/vw-server/auth"
+	"time"
 )
 
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
+	users = []string{"user1", "user 2"}
+	
 )
+
+type game struct {
+	author string
+	time time.Time
+}
+
+
+
+
+
+func room(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
+		"users": users,
+		"games": []game {},
+	})
+
+}
 
 
 func hello(c echo.Context) error {
@@ -77,5 +97,6 @@ func Linsten() {
 
 	e.GET("/", hello)
 	e.GET("/ws", wsUpgrade)
+	e.GET("/room", room)
 	e.Logger.Fatal(e.Start(":3002"))
 }
