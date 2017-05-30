@@ -20,7 +20,7 @@ var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	users = []string{"user1", "user 2"}
+	users = []string{"user1", "user 2", "user 3"}
 	
 )
 
@@ -28,9 +28,6 @@ type game struct {
 	author string
 	time time.Time
 }
-
-
-
 
 
 func room(c echo.Context) error {
@@ -90,6 +87,7 @@ func Linsten() {
 	// wth GET, PUT, POST or DELETE method.
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
+		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
 	}))
 
 	// Configure middleware with the custom claims type
