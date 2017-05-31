@@ -20,9 +20,11 @@ var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	users = []string{"user1", "user 2", "user 3"}
-	
+	users = make(map[string]struct{})
 )
+
+
+
 
 type game struct {
 	author string
@@ -32,10 +34,9 @@ type game struct {
 
 func room(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
-		"users": users,
+		"users": getKeys(users),
 		"games": []game {},
 	})
-
 }
 
 
@@ -43,11 +44,25 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "pong !!34:2");
 }
 
+
+func getKeys(from map[string]struct{}) (keys []string){
+	keys = make([]string, 0, len(from))
+	for k := range from {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+
+
 func wsUpgrade(c echo.Context) error {
 
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*auth.JWTUserClaims)
 	name := claims.Name
+
+
+	users[name] = struct{}{}
 
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -55,6 +70,7 @@ func wsUpgrade(c echo.Context) error {
 	}
 	defer func(){
 		log.Printf("user %s - exit",name)
+		delete(users, name)
 		ws.Close()
 	} ()
 
@@ -81,6 +97,8 @@ func Linsten() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	users["Fake User"] = struct{}{}
 
 	// CORS userInfo
 	// Allows requests from any `https://labstack.com` or `https://labstack.net` origin
