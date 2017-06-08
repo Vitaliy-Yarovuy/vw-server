@@ -1,5 +1,13 @@
 package room
 
+type Message struct {
+	User string `json:"user"`
+	Message string `json:"message"`
+}
+
+
+
+
 // hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {

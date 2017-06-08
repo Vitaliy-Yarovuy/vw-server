@@ -1,12 +1,13 @@
 package room
 
 import (
-	"bytes"
+	//"bytes"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"encoding/json"
 )
 
 const (
@@ -61,15 +62,32 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, rawMessage, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+
+		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+
+		var message Message
+		err = json.Unmarshal(rawMessage, &message)
+
+		if err != nil {
+			log.Printf("error: %v", err)
+			break
+		}
+
+		message.User = c.name
+
+		rawMessage, err = json.Marshal(message)
+		if err != nil {
+			log.Printf("error: %v", err)
+			break
+		}
+		c.hub.broadcast <- rawMessage
 	}
 }
 
