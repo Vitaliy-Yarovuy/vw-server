@@ -45,7 +45,7 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan []byte
+	send chan Command
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -56,6 +56,7 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
+		c.hub.broadcast <- leaveRoomCommand(c.name)
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -72,7 +73,7 @@ func (c *Client) readPump() {
 
 		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
-		var message Message
+		var message Command
 		err = json.Unmarshal(rawMessage, &message)
 
 		if err != nil {
@@ -82,12 +83,7 @@ func (c *Client) readPump() {
 
 		message.User = c.name
 
-		rawMessage, err = json.Marshal(message)
-		if err != nil {
-			log.Printf("error: %v", err)
-			break
-		}
-		c.hub.broadcast <- rawMessage
+		c.hub.broadcast <- message
 	}
 }
 
@@ -116,14 +112,10 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
-			}
+			rawMessage, err := json.Marshal(message)
+
+			w.Write(rawMessage)
 
 			if err := w.Close(); err != nil {
 				return

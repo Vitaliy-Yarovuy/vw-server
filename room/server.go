@@ -37,9 +37,12 @@ func serveWs(hub *Hub, c echo.Context) error {
 		log.Println(err)
 		return err
 	}
-	client := &Client{name: name, hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{name: name, hub: hub, conn: conn, send: make(chan Command)}
 	client.hub.register <- client
 	go client.writePump()
+	go func(){
+		client.hub.broadcast <- enterRoomCommand(client.name)
+	}()
 	client.readPump()
 	return nil
 }
