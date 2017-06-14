@@ -40,10 +40,13 @@ func serveWs(hub *Hub, c echo.Context) error {
 	client := &Client{name: name, hub: hub, conn: conn, send: make(chan Command)}
 	client.hub.register <- client
 	go client.writePump()
-	go func(){
+	time.AfterFunc(1*time.Second, func() {
 		client.hub.broadcast <- enterRoomCommand(client.name)
-	}()
+	})
 	client.readPump()
+	time.AfterFunc(1*time.Second, func() {
+		client.hub.broadcast <- leaveRoomCommand(client.name)
+	})
 	return nil
 }
 

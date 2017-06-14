@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"encoding/json"
 )
 
 const (
@@ -21,7 +20,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 64*1024
 )
 
 var (
@@ -56,33 +55,29 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.hub.broadcast <- leaveRoomCommand(c.name)
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
+	log.Printf("start Listen %s", c.name);
 	for {
-		_, rawMessage, err := c.conn.ReadMessage()
+		var message Command
+
+		err := c.conn.ReadJSON(&message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-
-		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-
-		var message Command
-		err = json.Unmarshal(rawMessage, &message)
-
 		if err != nil {
 			log.Printf("error: %v", err)
 			break
 		}
 
 		message.User = c.name
-
 		c.hub.broadcast <- message
 	}
 }
@@ -98,6 +93,7 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+	log.Printf("start Write %s", c.name);
 	for {
 		select {
 		case message, ok := <-c.send:
@@ -107,18 +103,11 @@ func (c *Client) writePump() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+			err := c.conn.WriteJSON(message)
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				return
-			}
-
-			rawMessage, err := json.Marshal(message)
-
-			w.Write(rawMessage)
-
-			if err := w.Close(); err != nil {
-				return
+				log.Printf("error: %v", err)
+				break
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
