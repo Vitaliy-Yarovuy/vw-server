@@ -1,5 +1,9 @@
 package room
 
+import (
+	"github.com/satori/go.uuid"
+)
+
 const(
 	ENTER_ROOM_ACTION string = "ENTER_ROOM_ACTION"
 	LEAVE_ROOM_ACTION string = "LEAVE_ROOM_ACTION"
@@ -13,6 +17,7 @@ const(
 )
 
 type Command struct {
+	Id uuid.UUID `json:"id"`
 	Type string `json:"type"`
 	User string `json:"user"`
 	Data string `json:"data"`
@@ -21,9 +26,9 @@ type Command struct {
 
 
 func enterRoomCommand(user string) Command{
-	return Command{USER_ENTERED_ROOM_ACTION, user, ""}
+	return Command{uuid.NewV1(),USER_ENTERED_ROOM_ACTION, user, ""}
 }
 
 func leaveRoomCommand(user string) Command{
-	return Command{USER_LEAVED_ROOM_ACTION, user, ""}
+	return Command{uuid.NewV1(), USER_LEAVED_ROOM_ACTION, user, ""}
 }
